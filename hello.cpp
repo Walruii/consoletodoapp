@@ -29,52 +29,54 @@ std::istream &operator>>(std::istream &is, Item &item) {
 
 class Todo {
   int serial_no;
+
 public:
   std::vector<Item> items;
-
-  Todo(): serial_no(0) {
-    std::ifstream fin;
-    fin.open("todos.txt");
-    if (!fin.is_open()) {
-      std::cerr << "Error opening file todos!" << std::endl;
-      return;
-    }
-    Item i1(-1, "");
-    /* int serial; */
-    /* fin >> serial; */
-    /* serial_no = serial; */
-    while (fin >> i1) {
-      items.push_back(i1);
-    }
-    fin.close();
-  }
-
-  void addItem(std::string title) {
-    serial_no++;
-    Item item(serial_no, title);
-    items.push_back(item);
-    std::ofstream of;
-    of.open("todos.txt", std::ios_base::app);
-    of << item;
-    of.close();
-  }
-
-  int get_items_size() { return items.size(); }
-  std::vector<Item> get_items() { return items; }
-
-  void delete_item(int index) { 
-    items.erase(items.begin() + index); 
-  }
+  Todo();
+  void addItem(std::string title);
+  int get_items_size();
+  std::vector<Item> get_items();
+  void delete_item(int index);
 };
 
+Todo::Todo() : serial_no(0) {
+  std::ifstream fin;
+  fin.open("todos.txt");
+  if (!fin.is_open()) {
+    std::cerr << "Error opening file todos!" << std::endl;
+    return;
+  }
+  Item i1(-1, "");
+  /* int serial; */
+  /* fin >> serial; */
+  /* serial_no = serial; */
+  while (fin >> i1) {
+    items.push_back(i1);
+  }
+  fin.close();
+}
+
+void Todo::addItem(std::string title) {
+  serial_no++;
+  Item item(serial_no, title);
+  items.push_back(item);
+  std::ofstream of;
+  of.open("todos.txt", std::ios_base::app);
+  of << item;
+  of.close();
+}
+
+int Todo::get_items_size() { return items.size(); }
+std::vector<Item> Todo::get_items() { return items; }
+
+void Todo::delete_item(int index) { items.erase(items.begin() + index); }
+
 int main() {
-  // init screen
-  // sets up memory and clears the screen
+  // init screen sets up memory and clears the screen
   Todo todo;
   initscr();
   cbreak();
   curs_set(0);
-  /* noecho(); */
 
   int height, width, start_y, start_x;
   height = todo.get_items_size() + 3;
