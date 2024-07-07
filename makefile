@@ -1,14 +1,34 @@
-CC=g++
-CFLAGS=-c -Wall
-LDFLAGS=-lncurses
+# Compiler
+CC = g++
 
-all: hello
+# Compiler flags
+CFLAGS = -c -Wall
 
-hello: hello.o
-    $(CC) $(LDFLAGS) hello.o -o hello
+# Linker flags
+LDFLAGS = -lncurses
 
-hello.o: hello.cpp
-    $(CC) $(CFLAGS) hello.cpp
+# executable name
+EXEC = todo
 
+# Source files
+SRCS = main.cpp item.cpp todo.cpp
+
+# Object files
+OBJS = $(SRCS:.cpp=.o)
+
+# Default target
+all: $(EXEC)
+
+# Linking the object file to create the executable
+$(EXEC): $(OBJS)
+	$(CC) -o $(EXEC) $(OBJS) $(LDFLAGS)
+
+# Compiling the source file to create the object file
+%.o: %.cpp
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Clean up build files
 clean:
-    rm -f hello hello.o
+	rm -f $(EXEC) $(OBJS)
+
+.PHONY: all clean

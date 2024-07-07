@@ -1,75 +1,8 @@
-#include <fstream>
+#include "todo.hpp"
 #include <iostream>
 #include <ncurses.h>
-#include <string>
-#include <vector>
 
-class Item {
-  std::string title;
-  bool check;
-  int id;
-
-public:
-  std::string get_title() { return title; }
-  Item(int id, std::string title) : id(id), title(title), check(false){};
-  bool get_check() { return check; }
-  void set_check(bool chk) { check = chk; }
-  friend std::ostream &operator<<(std::ostream &os, const Item &item);
-  friend std::istream &operator>>(std::istream &os, Item &item);
-};
-
-std::ostream &operator<<(std::ostream &os, const Item &item) {
-  os << item.id << " " << item.title << " ";
-  return os;
-}
-std::istream &operator>>(std::istream &is, Item &item) {
-  is >> item.id >> item.title;
-  return is;
-}
-
-class Todo {
-  int serial_no;
-
-public:
-  std::vector<Item> items;
-  Todo();
-  void addItem(std::string title);
-  int get_items_size();
-  std::vector<Item> get_items();
-  void delete_item(int index);
-};
-
-Todo::Todo() : serial_no(0) {
-  std::ifstream fin;
-  fin.open("todos.txt");
-  if (!fin.is_open()) {
-    std::cerr << "Error opening file todos!" << std::endl;
-    return;
-  }
-  Item i1(-1, "");
-  /* int serial; */
-  /* fin >> serial; */
-  /* serial_no = serial; */
-  while (fin >> i1) {
-    items.push_back(i1);
-  }
-  fin.close();
-}
-
-void Todo::addItem(std::string title) {
-  serial_no++;
-  Item item(serial_no, title);
-  items.push_back(item);
-  std::ofstream of;
-  of.open("todos.txt", std::ios_base::app);
-  of << item;
-  of.close();
-}
-
-int Todo::get_items_size() { return items.size(); }
-std::vector<Item> Todo::get_items() { return items; }
-
-void Todo::delete_item(int index) { items.erase(items.begin() + index); }
+int PAGE_SIZE = 2;
 
 int main() {
   // init screen sets up memory and clears the screen
@@ -89,9 +22,11 @@ int main() {
 
   int choice;
   int highlight = 0;
+  int page_number = 0;
 
   while (true) {
-    height = todo.get_items_size() + 3;
+    // Creating a window
+    height = todo.get_items_size() + 6;
     getyx(stdscr, y, x);
     getmaxyx(stdscr, yMax, xMax);
     WINDOW *menuwin = newwin(height, xMax, 0, start_x);
@@ -99,22 +34,42 @@ int main() {
     refresh();
     wrefresh(menuwin);
     box(menuwin, 0, 0);
-    mvwprintw(menuwin, 0, 1, "TODOs:");
-    for (int i = 0; i < todo.get_items_size(); i++) {
+
+    // Top line display
+    mvwprintw(menuwin, 0, 1, "TODOs");
+
+    // Item Display
+    int display = 0;
+    for (int i = (page_number)*PAGE_SIZE;
+         i < (page_number + 1) * PAGE_SIZE && i < todo.get_items_size(); i++) {
       if (i == highlight) {
         wattron(menuwin, A_REVERSE);
       }
-      mvwprintw(menuwin, i + 1, 1, "[%s]%s",
-                (todo.items[i].get_check()) ? " " : "X",
+      std::string indent_str(todo.items[i].get_indent_level() * 2, ' ');
+      mvwprintw(menuwin, display + 1, 1, "%s[%s]%s", indent_str.c_str(),
+                (todo.items[i].get_check()) ? "X" : " ",
                 todo.items[i].get_title().c_str());
       wattroff(menuwin, A_REVERSE);
+      display++;
     }
 
+    // add Todo line
     if (highlight == todo.get_items_size()) {
       wattron(menuwin, A_REVERSE);
     }
     mvwprintw(menuwin, todo.get_items_size() + 1, 1, "Add Todo");
     wattroff(menuwin, A_REVERSE);
+
+    // Page line
+    if (highlight == todo.get_items_size() + 1) {
+      wattron(menuwin, A_REVERSE);
+    }
+    mvwprintw(menuwin, todo.get_items_size() + 2, 1, "Page");
+    wattroff(menuwin, A_REVERSE);
+
+    // Last options line
+    mvwprintw(menuwin, todo.get_items_size() + 4, 1,
+              "vim mode\tCheck: Enter\tDelete: d\tIndent: hl");
 
     choice = wgetch(menuwin);
     switch (choice) {
@@ -126,8 +81,8 @@ int main() {
       break;
     case 'j':
       highlight++;
-      if (highlight > todo.get_items_size()) {
-        highlight = todo.get_items_size();
+      if (highlight > todo.get_items_size() + 1) {
+        highlight = todo.get_items_size() + 1;
       }
       break;
     case 'd':
@@ -136,17 +91,40 @@ int main() {
       todo.delete_item(highlight);
       erase();
       break;
-    case 10:
+    case 'h':
       if (highlight >= todo.get_items_size()) {
+        if (page_number > 0) {
+          page_number--;
+        }
+      } else {
+        todo.indent(todo.items[highlight], LEFT);
+      }
+      erase();
+      break;
+    case 'l':
+      if (highlight >= todo.get_items_size()) {
+        if (page_number > (todo.get_items_size() / PAGE_SIZE)) {
+
+        } else {
+          page_number++;
+        }
+      } else {
+        todo.indent(todo.items[highlight], RIGHT);
+      }
+      erase();
+      break;
+    case 10:
+      if (highlight == todo.get_items_size()) {
         char input[256];
         mvprintw(0, 0, "Add a todo: ");
         refresh();
         wrefresh(menuwin);
         getnstr(input, 256);
-        todo.addItem(input);
+        todo.add_item(input);
         break;
-      }
-      todo.items[highlight].set_check(!todo.items[highlight].get_check());
+      } else if (highlight == todo.get_items_size() + 1)
+        break;
+      todo.check_item(todo.items[highlight]);
       break;
 
     default:
