@@ -2,7 +2,9 @@
 #include <iostream>
 #include <ncurses.h>
 
-int PAGE_SIZE = 2;
+#define PAGE_SIZE 10
+
+void test() {}
 
 int main() {
   // init screen sets up memory and clears the screen
@@ -11,13 +13,9 @@ int main() {
   cbreak();
   curs_set(0);
 
-  int height, width, start_y, start_x;
-  height = todo.get_items_size() + 3;
-  width = 20;
-  start_y = start_x = 0;
-
-  int x, y, yBed, xBeg, yMax, xMax;
-  getyx(stdscr, y, x);
+  int start_x = 0;
+  int start_y = 0;
+  int yMax, xMax;
   getmaxyx(stdscr, yMax, xMax);
 
   int choice;
@@ -26,10 +24,9 @@ int main() {
 
   while (true) {
     // Creating a window
-    height = todo.get_items_size() + 6;
-    getyx(stdscr, y, x);
+    int height = 10 + 6;
     getmaxyx(stdscr, yMax, xMax);
-    WINDOW *menuwin = newwin(height, xMax, 0, start_x);
+    WINDOW *menuwin = newwin(height, xMax, start_y, start_x);
     box(menuwin, 0, 0);
     refresh();
     wrefresh(menuwin);
@@ -54,21 +51,21 @@ int main() {
     }
 
     // add Todo line
-    if (highlight == todo.get_items_size()) {
+    if (highlight == display) {
       wattron(menuwin, A_REVERSE);
     }
-    mvwprintw(menuwin, todo.get_items_size() + 1, 1, "Add Todo");
+    mvwprintw(menuwin, display + 1, 1, "Add Todo");
     wattroff(menuwin, A_REVERSE);
 
     // Page line
-    if (highlight == todo.get_items_size() + 1) {
+    if (highlight == display + 1) {
       wattron(menuwin, A_REVERSE);
     }
-    mvwprintw(menuwin, todo.get_items_size() + 2, 1, "Page");
+    mvwprintw(menuwin, display + 2, 1, "Page");
     wattroff(menuwin, A_REVERSE);
 
     // Last options line
-    mvwprintw(menuwin, todo.get_items_size() + 4, 1,
+    mvwprintw(menuwin, height - 2, 1,
               "vim mode\tCheck: Enter\tDelete: d\tIndent: hl");
 
     choice = wgetch(menuwin);
@@ -81,18 +78,18 @@ int main() {
       break;
     case 'j':
       highlight++;
-      if (highlight > todo.get_items_size() + 1) {
-        highlight = todo.get_items_size() + 1;
+      if (highlight > display + 1) {
+        highlight = display + 1;
       }
       break;
     case 'd':
-      if (highlight >= todo.get_items_size())
+      if (highlight >= display)
         break;
       todo.delete_item(highlight);
       erase();
       break;
     case 'h':
-      if (highlight >= todo.get_items_size()) {
+      if (highlight >= display) {
         if (page_number > 0) {
           page_number--;
         }
@@ -102,7 +99,7 @@ int main() {
       erase();
       break;
     case 'l':
-      if (highlight >= todo.get_items_size()) {
+      if (highlight >= display) {
         if (page_number > (todo.get_items_size() / PAGE_SIZE)) {
 
         } else {
@@ -114,7 +111,7 @@ int main() {
       erase();
       break;
     case 10:
-      if (highlight == todo.get_items_size()) {
+      if (highlight == display) {
         char input[256];
         mvprintw(0, 0, "Add a todo: ");
         refresh();
